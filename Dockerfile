@@ -7,7 +7,9 @@ COPY pyproject.toml ./
 COPY app ./app
 RUN pip install --no-cache-dir .
 
-RUN useradd --system --no-create-home trazaraee
+RUN useradd --system --no-create-home trazaraee \
+    && mkdir -p /srv/photos && chown trazaraee /srv/photos
+ENV PHOTOS_DIR=/srv/photos
 USER trazaraee
 
 EXPOSE 8000

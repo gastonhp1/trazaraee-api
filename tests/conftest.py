@@ -6,6 +6,7 @@ _tmp = tempfile.mkdtemp()
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
 os.environ["ADMIN_KEY"] = "admin-test"
 os.environ["PUBLIC_BASE_URL"] = "https://trazas.test"
+os.environ["PHOTOS_DIR"] = f"{_tmp}/photos"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

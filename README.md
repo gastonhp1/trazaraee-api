@@ -21,6 +21,7 @@ Trazabilidad de residuos de aparatos eléctricos y electrónicos (RAEE) para coo
 | Generador del lote (empresa/organismo) | Oculto en la vista pública salvo que se marque `generator_public`. |
 | Destinatario de ventas/donaciones | Solo estaciones autenticadas. |
 | Quién hizo cada paso | Se registra la **estación** (mesa, banco de pruebas), no la persona. Es deliberado: el sistema no debe servir para medir o controlar a trabajadores individuales. |
+| Fotos | Solo estaciones autenticadas. Nunca en la vista pública; los eventos `foto`, `foto_eliminada` y `nota` no aparecen en su línea de tiempo. |
 | Vista pública (`/public/a/{id}`) | Tipo, estado, origen (si es público), línea de tiempo (solo tipos de evento y fechas), si hay certificado de borrado y si la cadena verifica. |
 
 ## Correr en local
@@ -83,10 +84,18 @@ La definición ejecutable está en `app/rules.py`.
 | POST | `/assets/{id}/install` | Instala un componente en este equipo |
 | GET | `/assets/{id}/genealogy` | Ancestros, componentes extraídos e instalados |
 | GET | `/assets/{id}/verify` | Verifica la cadena de hashes |
+| POST/GET | `/assets/{id}/photos`, `/lots/{id}/photos` | Subir (cuerpo binario JPEG/PNG/WebP, `?photo_id=` generado por el cliente, idempotente) y listar fotos |
+| GET/DELETE | `/photos/{id}` | Descargar una foto (privada) o eliminarla (la imagen se borra; queda el evento `foto_eliminada`) |
 | GET | `/public/a/{id}`, `/public/l/{id}` | Vista pública (sin auth) |
 | GET | `/labels/{a\|l}/{id}.{svg\|png}` | QR para imprimir |
 
+## Fotos
+
+El hash SHA-256 de cada foto entra en la cadena de eventos (`foto`), así que se puede probar que una imagen no cambió. Se valida el formato por los primeros bytes (no por lo que declare el cliente), con límites de 8 MB por foto y 30 por lote/equipo (`MAX_PHOTO_BYTES`, `MAX_PHOTOS_PER_SUBJECT`). Los archivos se guardan en disco en `PHOTOS_DIR` (volumen `photos` en Docker): **hay que incluirlo en los backups**. Al eliminar una foto se borra el archivo (después responde 410) y se registra `foto_eliminada`.
+
 ## Límites conocidos (honestos)
+
+- Las fotos viven en el disco del servidor, no en almacenamiento de objetos; para varios servidores habría que moverlas a S3 o similar. No se analiza su contenido (personas, pantallas con datos): la responsabilidad es de quien fotografía.
 
 - **La cadena de hashes detecta manipulación, no la impide.** Quien tenga acceso total a la base puede recalcular toda la cadena. Si algún cliente exige inmutabilidad verificable por terceros, el paso siguiente es publicar periódicamente el hash raíz (`head` de `/verify`) en un medio externo, sin necesidad de smart contracts.
 - **No se exige borrado (ni destrucción documentada) antes de enviar un equipo a scrap.** Hoy se puede mandar a scrap un equipo con el disco sin borrar. Es una decisión de política que hay que definir con la cooperativa: puede que el disco se destruya físicamente en el proceso, y entonces lo correcto sería registrar esa destrucción como un tipo de borrado.

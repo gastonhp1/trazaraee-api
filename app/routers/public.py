@@ -34,7 +34,8 @@ def public_asset(public_id: str, db: Session = Depends(get_db)):
     asset = get_asset(db, public_id)
     lot = db.get(Lot, asset.lot_id)
     events = events_for(db, "asset", asset.id)
-    visible = [e for e in events if e.type != "nota"]
+    # Notas y fotos son internas: nunca se muestran en la vista pública.
+    visible = [e for e in events if e.type not in ("nota", "foto", "foto_eliminada")]
     return PublicAssetOut(
         public_id=asset.public_id,
         kind=asset.kind,

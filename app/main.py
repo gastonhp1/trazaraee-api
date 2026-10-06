@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from . import config
 from .db import Base, engine
-from .routers import assets, lots, public, stations
+from .routers import assets, lots, photos, public, stations
 from .rules import RuleError
 
 
@@ -56,4 +56,5 @@ def health():
 app.include_router(stations.router)
 app.include_router(lots.router)
 app.include_router(assets.router)
+app.include_router(photos.router)
 app.include_router(public.router)

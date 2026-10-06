@@ -166,6 +166,16 @@ class VerifyOut(BaseModel):
     head: str | None = None
 
 
+# ---- fotos ----
+class PhotoOut(BaseModel):
+    public_id: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+    caption: str | None
+    created_at: datetime
+
+
 # ---- vista pública (la que abre quien escanea el QR) ----
 class PublicTimelineItem(BaseModel):
     type: str

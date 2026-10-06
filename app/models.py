@@ -138,3 +138,22 @@ class Event(Base):
     created_at: Mapped[str] = mapped_column(String(40))
     # ID generado por el cliente: hace idempotentes los reintentos de la cola offline.
     client_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+
+
+class Photo(Base):
+    """Foto de un lote o de un equipo. El archivo vive en disco (ver storage.py)."""
+
+    __tablename__ = "photos"
+    __table_args__ = (Index("ix_photos_subject", "subject_type", "subject_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(26), unique=True, index=True)
+    subject_type: Mapped[str] = mapped_column(String(10))  # "lot" | "asset"
+    subject_id: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+    content_type: Mapped[str] = mapped_column(String(30))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    caption: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    station_id: Mapped[int] = mapped_column(ForeignKey("stations.id"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
