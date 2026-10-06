@@ -3,14 +3,13 @@
     ingresado ──prueba──► funciona ──refuncionalizacion──► refuncionalizado
                     │         │  │                              │  │
                     │         │  └──instalacion──► instalado    │  │
-                    │         ├──venta──────────► vendido ◄─────┘  │
                     │         ├──donacion───────► donado ◄─────────┘
                     └──────► falla ──scrap──► scrap
                               │
               funciona/falla ─┴──desarme──► desarmado (los componentes nacen como activos nuevos)
 
 Reglas transversales:
-  * Si el activo tiene almacenamiento (has_storage), no puede refuncionalizarse, venderse,
+  * Si el activo tiene almacenamiento (has_storage), no puede refuncionalizarse,
     donarse ni instalarse sin un borrado de datos exitoso registrado.
   * 'borrado' y 'nota' no cambian el estado.
 """
@@ -22,19 +21,18 @@ STATUSES = {
     "funciona",
     "falla",
     "refuncionalizado",
-    "vendido",
     "donado",
     "scrap",
     "desarmado",
     "instalado",
 }
-TERMINAL = {"vendido", "donado", "scrap", "desarmado", "instalado"}
+TERMINAL = {"donado", "scrap", "desarmado", "instalado"}
 # Estados en los que la masa del activo sigue físicamente en planta.
 STOCK = {"ingresado", "funciona", "falla", "refuncionalizado"}
 # Estados en los que la masa salió como reutilización.
-REUSE = {"vendido", "donado", "instalado"}
+REUSE = {"donado", "instalado"}
 
-GENERIC_EVENT_TYPES = {"prueba", "borrado", "refuncionalizacion", "venta", "donacion", "scrap", "nota"}
+GENERIC_EVENT_TYPES = {"prueba", "borrado", "refuncionalizacion", "donacion", "scrap", "nota"}
 
 KINDS = {"computadora", "notebook", "disco", "ram", "cpu", "placa", "monitor", "impresora", "otro"}
 STORAGE_KINDS = {"disco"}
@@ -108,11 +106,11 @@ def apply(asset, event_type: str, payload: dict) -> Outcome:
         _need_wipe(asset)
         return Outcome("refuncionalizado")
 
-    if event_type in ("venta", "donacion"):
+    if event_type == "donacion":
         _from(asset, {"funciona", "refuncionalizado"}, event_type)
         _require_str(payload, "destinatario")
         _need_wipe(asset)
-        return Outcome("vendido" if event_type == "venta" else "donado")
+        return Outcome("donado")
 
     if event_type == "scrap":
         _from(asset, {"falla"}, event_type)

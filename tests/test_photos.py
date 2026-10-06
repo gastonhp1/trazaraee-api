@@ -151,7 +151,7 @@ def test_delete_removes_the_image_but_keeps_the_audit_trail(client, auth):
 
 
 def test_photos_work_on_assets_in_a_final_state(client, auth):
-    """Un equipo ya vendido o en scrap puede seguir documentándose con fotos."""
+    """Un equipo ya donado o en scrap puede seguir documentándose con fotos."""
     lot = make_lot(client, auth)
     pc = make_asset(client, auth, lot)
     post_event(client, auth, pc, "prueba", {"result": "falla"})

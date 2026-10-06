@@ -2,14 +2,16 @@
 
 Trazabilidad de residuos de aparatos eléctricos y electrónicos (RAEE) para cooperativas de reciclaje informático. Cada equipo recuperado lleva un QR que apunta a un ID opaco; detrás hay un historial verificable de dónde vino, qué se le hizo y adónde fue.
 
-> **Estado: prototipo.** El flujo de trabajo (ingreso → prueba → desarme/borrado → venta, donación o scrap) está inferido de información pública sobre cooperativas de este tipo. **No fue validado en un galpón real.** Antes de tomar decisiones de diseño definitivas, hay que visitar una planta, mirar el flujo real y preguntar qué registros les exige hoy la autoridad ambiental. Repo hermano: `trazaraee-app` (PWA para usar en planta).
+> **Sin fines de lucro.** El objetivo es que una cooperativa recupere equipos y los **done a escuelas y otras instituciones**, con trazabilidad de a dónde fue cada cosa. No hay circuito de venta ni de compradores.
+>
+> **Estado: prototipo.** El flujo de trabajo (ingreso → prueba → desarme/borrado → donación o scrap) está inferido de información pública sobre cooperativas de este tipo. **No fue validado en un galpón real.** Antes de tomar decisiones de diseño definitivas, hay que visitar una planta, mirar el flujo real y preguntar qué registros les exige hoy la autoridad ambiental. Repo hermano: `trazaraee-app` (PWA para usar en planta).
 
 ## Ideas centrales
 
 - **Genealogía, no cadena lineal.** Un equipo se desarma y sus componentes nacen como activos nuevos con `source_asset` (de dónde salieron). Después pueden instalarse en otro equipo (`installed_in`). Se puede responder "este disco salió de la PC X del lote Y y hoy está en la PC Z".
 - **Lotes + activos individuales.** Todo ingresa como lote (peso, generador). Solo lo que vale la pena (computadoras, notebooks, discos, RAM...) tiene QR propio. El scrap se registra por fracción de material con peso y destino.
 - **Balance de masas** por lote: `ingresado = stock + reutilizado + fracciones (+ diferencia)`. Si la diferencia supera la tolerancia (2 % por defecto), el lote no cierra.
-- **Borrado de datos obligatorio** antes de refuncionalizar, vender, donar o instalar cualquier equipo/componente con almacenamiento.
+- **Borrado de datos obligatorio** antes de refuncionalizar, donar o instalar cualquier equipo/componente con almacenamiento.
 - **Eventos append-only con hash encadenado** por lote y por activo. Editar un evento viejo directo en la base rompe la verificación (`GET /assets/{id}/verify`).
 - **Pensado para offline:** el cliente genera los IDs y un `client_id` por evento, así los reintentos de una cola offline son idempotentes.
 
@@ -19,7 +21,7 @@ Trazabilidad de residuos de aparatos eléctricos y electrónicos (RAEE) para coo
 |---|---|
 | Serial del equipo | Solo estaciones autenticadas. Nunca en el QR ni en la vista pública. |
 | Generador del lote (empresa/organismo) | Oculto en la vista pública salvo que se marque `generator_public`. |
-| Destinatario de ventas/donaciones | Solo estaciones autenticadas. |
+| Institución que recibe una donación | Solo estaciones autenticadas. |
 | Quién hizo cada paso | Se registra la **estación** (mesa, banco de pruebas), no la persona. Es deliberado: el sistema no debe servir para medir o controlar a trabajadores individuales. |
 | Fotos | Solo estaciones autenticadas. Nunca en la vista pública; los eventos `foto`, `foto_eliminada` y `nota` no aparecen en su línea de tiempo. |
 | Vista pública (`/public/a/{id}`) | Tipo, estado, origen (si es público), línea de tiempo (solo tipos de evento y fechas), si hay certificado de borrado y si la cadena verifica. |
@@ -63,9 +65,9 @@ curl -X POST localhost:8000/lots -H "X-Station-Key: $K" -H "Content-Type: applic
 ## Estados de un activo
 
 ```
-ingresado ─prueba→ funciona ─refuncionalizacion→ refuncionalizado ─┬→ vendido
-              └──→ falla ─scrap→ scrap                    funciona ─┼→ donado
-        funciona/falla ─desarme→ desarmado (nacen componentes)      └→ instalado (componente)
+ingresado ─prueba→ funciona ─refuncionalizacion→ refuncionalizado ─┬→ donado
+              └──→ falla ─scrap→ scrap                    funciona ─┴→ instalado (componente)
+        funciona/falla ─desarme→ desarmado (nacen componentes)
 ```
 
 La definición ejecutable está en `app/rules.py`.
@@ -79,7 +81,7 @@ La definición ejecutable está en `app/rules.py`.
 | GET | `/lots/{id}/balance` | Balance de masas |
 | POST/GET | `/lots/{id}/fractions` | Salidas de scrap por material |
 | POST/GET | `/assets`, `/assets/{id}` | Alta y consulta de activos |
-| POST | `/assets/{id}/events` | Prueba, borrado, refuncionalización, venta, donación, scrap, nota |
+| POST | `/assets/{id}/events` | Prueba, borrado, refuncionalización, donación, scrap, nota |
 | POST | `/assets/{id}/disassemble` | Desarma y crea componentes |
 | POST | `/assets/{id}/install` | Instala un componente en este equipo |
 | GET | `/assets/{id}/genealogy` | Ancestros, componentes extraídos e instalados |

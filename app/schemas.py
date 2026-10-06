@@ -9,7 +9,7 @@ Kind = Literal["computadora", "notebook", "disco", "ram", "cpu", "placa", "monit
 Material = Literal[
     "plastico", "hierro", "aluminio", "cobre", "placas", "cables", "vidrio", "baterias", "toner", "otros"
 ]
-GenericEventType = Literal["prueba", "borrado", "refuncionalizacion", "venta", "donacion", "scrap", "nota"]
+GenericEventType = Literal["prueba", "borrado", "refuncionalizacion", "donacion", "scrap", "nota"]
 
 
 class _PublicIdMixin(BaseModel):

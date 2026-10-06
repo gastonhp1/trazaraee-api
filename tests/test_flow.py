@@ -1,14 +1,14 @@
 from conftest import make_asset, make_lot, post_event
 
 
-def test_full_flow_requires_wipe_before_sale(client, auth):
+def test_full_flow_requires_wipe_before_donation(client, auth):
     lot = make_lot(client, auth)
     pc = make_asset(client, auth, lot, serial="SN-123", has_storage=True, weight_kg=8)
 
     assert post_event(client, auth, pc, "prueba", {"result": "ok"}).status_code == 201
 
-    # Con almacenamiento y sin borrado, la venta se rechaza.
-    r = post_event(client, auth, pc, "venta", {"destinatario": "Escuela N° 1"})
+    # Con almacenamiento y sin borrado, la donación se rechaza.
+    r = post_event(client, auth, pc, "donacion", {"destinatario": "Escuela N° 1"})
     assert r.status_code == 409
     assert r.json()["code"] == "regla"
 
@@ -20,7 +20,7 @@ def test_full_flow_requires_wipe_before_sale(client, auth):
     assert got["wiped"] is True
 
     # Estado final: no admite más eventos operativos.
-    assert post_event(client, auth, pc, "venta", {"destinatario": "X"}).status_code == 409
+    assert post_event(client, auth, pc, "donacion", {"destinatario": "X"}).status_code == 409
 
     v = client.get(f"/assets/{pc['public_id']}/verify", headers=auth).json()
     # ingreso, prueba, borrado, donacion: los intentos rechazados no dejan evento.
@@ -32,7 +32,7 @@ def test_failed_wipe_does_not_unlock(client, auth):
     pc = make_asset(client, auth, lot, has_storage=True)
     post_event(client, auth, pc, "prueba", {"result": "ok"})
     post_event(client, auth, pc, "borrado", {"method": "nwipe", "result": "falla"})
-    r = post_event(client, auth, pc, "venta", {"destinatario": "Alguien"})
+    r = post_event(client, auth, pc, "donacion", {"destinatario": "Alguien"})
     assert r.status_code == 409
 
 
@@ -40,13 +40,13 @@ def test_transition_and_payload_rules(client, auth):
     lot = make_lot(client, auth)
     pc = make_asset(client, auth, lot)
 
-    # No se vende algo que no fue probado.
-    assert post_event(client, auth, pc, "venta", {"destinatario": "X"}).status_code == 409
+    # No se dona algo que no fue probado.
+    assert post_event(client, auth, pc, "donacion", {"destinatario": "X"}).status_code == 409
     # Payload inválido -> 422
     assert post_event(client, auth, pc, "prueba", {"result": "quizas"}).status_code == 422
 
     post_event(client, auth, pc, "prueba", {"result": "ok"})
-    assert post_event(client, auth, pc, "venta", {}).status_code == 422  # falta destinatario
+    assert post_event(client, auth, pc, "donacion", {}).status_code == 422  # falta destinatario
     # scrap sólo desde 'falla'
     assert post_event(client, auth, pc, "scrap").status_code == 409
     # borrado sobre un equipo sin almacenamiento
@@ -162,11 +162,11 @@ def test_genealogy_disassembly_and_install(client, auth):
 
 def test_mass_balance(client, auth):
     lot = make_lot(client, auth, weight_kg=100)
-    sold = make_asset(client, auth, lot, weight_kg=20)
+    donated = make_asset(client, auth, lot, weight_kg=20)
     make_asset(client, auth, lot, weight_kg=45)  # sigue en stock (ingresado)
 
-    post_event(client, auth, sold, "prueba", {"result": "ok"})
-    post_event(client, auth, sold, "venta", {"destinatario": "Cliente"})
+    post_event(client, auth, donated, "prueba", {"result": "ok"})
+    post_event(client, auth, donated, "donacion", {"destinatario": "Escuela N° 3"})
 
     def add_fraction(kg):
         r = client.post(
@@ -192,7 +192,7 @@ def test_public_view_hides_private_data(client, auth):
     pc = make_asset(client, auth, lot, serial="SN-SECRETO-999", has_storage=True)
     post_event(client, auth, pc, "prueba", {"result": "ok"})
     post_event(client, auth, pc, "borrado", {"method": "nwipe", "result": "ok"})
-    post_event(client, auth, pc, "venta", {"destinatario": "Comprador Privado"})
+    post_event(client, auth, pc, "donacion", {"destinatario": "Receptor Privado"})
     post_event(client, auth, pc, "nota", {"text": "nota interna"})
 
     r = client.get(f"/public/a/{pc['public_id']}")  # sin autenticación
@@ -202,8 +202,8 @@ def test_public_view_hides_private_data(client, auth):
     assert data["origin"] == "Generador reservado"
     assert data["data_wipe_certified"] is True
     assert data["chain_verified"] is True
-    assert [t["type"] for t in data["timeline"]] == ["ingreso", "prueba", "borrado", "venta"]
-    for secret in ("SN-SECRETO-999", "Comprador Privado", "Planta Confidencial", "Banco de pruebas", "nota interna"):
+    assert [t["type"] for t in data["timeline"]] == ["ingreso", "prueba", "borrado", "donacion"]
+    for secret in ("SN-SECRETO-999", "Receptor Privado", "Planta Confidencial", "Banco de pruebas", "nota interna"):
         assert secret not in text
 
     # Si la cooperativa lo habilita, el generador se muestra.
