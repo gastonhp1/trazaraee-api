@@ -89,6 +89,7 @@ La definición ejecutable está en `app/rules.py`.
 ## Límites conocidos (honestos)
 
 - **La cadena de hashes detecta manipulación, no la impide.** Quien tenga acceso total a la base puede recalcular toda la cadena. Si algún cliente exige inmutabilidad verificable por terceros, el paso siguiente es publicar periódicamente el hash raíz (`head` de `/verify`) en un medio externo, sin necesidad de smart contracts.
+- **No se exige borrado (ni destrucción documentada) antes de enviar un equipo a scrap.** Hoy se puede mandar a scrap un equipo con el disco sin borrar. Es una decisión de política que hay que definir con la cooperativa: puede que el disco se destruya físicamente en el proceso, y entonces lo correcto sería registrar esa destrucción como un tipo de borrado.
 - Un solo certificado de borrado por activo (`wiped`); no modela discos múltiples dentro de una misma PC. Si hace falta, se modelan los discos como componentes.
 - Sin migraciones: las tablas se crean al arrancar (`create_all`). Pasar a Alembic antes de tener datos reales.
 - Autenticación por clave de estación, sin roles ni usuarios. Alcanza para un galpón; no para una plataforma multi-organización.

@@ -13,12 +13,38 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 from .db import Base
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class UTCDateTime(TypeDecorator):
+    """Fecha/hora siempre con zona UTC al leer.
+
+    SQLite descarta la zona horaria al guardar y devuelve datetimes "naive"; el cliente los
+    interpretaría como hora local (en Argentina, 3 horas corridas). Con Postgres es un no-op.
+    """
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
 
 
 class Station(Base):
@@ -34,7 +60,7 @@ class Station(Base):
     name: Mapped[str] = mapped_column(String(80), unique=True)
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
 
 
 class Lot(Base):
@@ -48,7 +74,7 @@ class Lot(Base):
     weight_kg: Mapped[float] = mapped_column(Float)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     station_id: Mapped[int] = mapped_column(ForeignKey("stations.id"))
-    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    received_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
 
 
 class Asset(Base):
@@ -70,7 +96,7 @@ class Asset(Base):
     source_asset_id: Mapped[int | None] = mapped_column(ForeignKey("assets.id"), nullable=True, index=True)
     # ...y en qué equipo terminó instalado.
     installed_in_id: Mapped[int | None] = mapped_column(ForeignKey("assets.id"), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
 
 
 class Fraction(Base):
@@ -86,7 +112,7 @@ class Fraction(Base):
     destination_kind: Mapped[str] = mapped_column(String(30))
     station_id: Mapped[int] = mapped_column(ForeignKey("stations.id"))
     client_id: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=_now)
 
 
 class Event(Base):

@@ -215,6 +215,22 @@ def test_public_view_hides_private_data(client, auth):
     assert pl.status_code == 200 and "Planta Confidencial" not in pl.text
 
 
+def test_datetimes_are_returned_with_utc_offset(client, auth):
+    """Regresión: con SQLite las fechas volvían sin zona y el cliente las leía como hora local."""
+    from datetime import datetime
+
+    lot = make_lot(client, auth)
+    pc = make_asset(client, auth, lot)
+    reads = [
+        client.get(f"/lots/{lot['public_id']}", headers=auth).json()["received_at"],
+        client.get(f"/assets/{pc['public_id']}", headers=auth).json()["created_at"],
+        client.get(f"/public/a/{pc['public_id']}").json()["received_at"],
+        client.get(f"/public/l/{lot['public_id']}").json()["received_at"],
+    ]
+    for value in reads:
+        assert datetime.fromisoformat(value).utcoffset() is not None, value
+
+
 def test_auth_is_required_for_private_endpoints(client, auth):
     assert client.get("/lots").status_code == 401
     assert client.get("/lots", headers={"X-Station-Key": "tr_falsa"}).status_code == 401
